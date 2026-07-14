@@ -26,6 +26,7 @@ jobs:
         run: |
           echo "Sending instance creation request to Mumbai..."
           
+          # Added "|| true" at the end of the command so GitHub won't force-crash here
           OUTPUT=$(oci compute instance launch \
             --availability-domain "nLVy:AP-MUMBAI-1-AD-1" \
             --compartment-id "ocid1.tenancy.oc1..aaaaaaaazojjfrsvoyusptr6r6bfhfi6d4smv734ne6e5hhgp5j3jfskaixq" \
@@ -34,7 +35,7 @@ jobs:
             --image-id "ocid1.image.oc1.ap-mumbai-1.aaaaaaaay2gm4bht5gaf4ubvmimpprarmnceguytmzrfufmqfmmvgpul6z5a" \
             --subnet-id "ocid1.subnet.oc1.ap-mumbai-1.aaaaaaa3vqvbmtehltzufkazsx6bdb2kzkjwxkhzfrm2dbart75il3mjvma" \
             --assign-public-ip true \
-            --metadata '{"ssh_authorized_keys":"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCv9PSFVKdvpLDkRpYzpaRt3NpQZbLO9lkp18bdQKDS4hNYbbon9y3RvoeLhavgj1JhUVcgEmOuL7PcYLcnrvyzMpF2nzEojw/VlkJsEJAXG5aekrOwm+47CyOWbO1lEtLSMIimMW+NtIgTnj1ytsvO//5xfEeiKnQPcQCVNtNHsXGekhWnASJlWP5/m3MhjtX9RGY5yk84TNsMs3hM1OqUn3jzLfjwtevPqFszVu+AnvXmdRqyxf5twxDnc5vZuv6krz3dDKzZg0OD0sJ53IWGybyg59kP9672NauM86+WYG1HSo/RPr10j46NaJI10pZel4Gc35gMqsYQbyCiUWR79 ssh-key-2026-07-14"}' 2>&1)
+            --metadata '{"ssh_authorized_keys":"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCv9PSFVKdvpLDkRpYzpaRt3NpQZbLO9lkp18bdQKDS4hNYbbon9y3RvoeLhavgj1JhUVcgEmOuL7PcYLcnrvyzMpF2nzEojw/VlkJsEJAXG5aekrOwm+47CyOWbO1lEtLSMIimMW+NtIgTnj1ytsvO//5xfEeiKnQPcQCVNtNHsXGekhWnASJlWP5/m3MhjtX9RGY5yk84TNsMs3hM1OqUn3jzLfjwtevPqFszVu+AnvXmdRqyxf5twxDnc5vZuv6krz3dDKzZg0OD0sJ53IWGybyg59kP9672NauM86+WYG1HSo/RPr10j46NaJI10pZel4Gc35gMqsYQbyCiUWR79 ssh-key-2026-07-14"}' 2>&1) || true
 
           if [[ $OUTPUT == *"ocid1.instance"* ]]; then
             echo "SUCCESS! ARM Instance Created."
@@ -42,4 +43,5 @@ jobs:
           else
             echo "Out of capacity. Will try again in 5 minutes."
             echo "Oracle Error: $OUTPUT"
+            exit 1
           fi
