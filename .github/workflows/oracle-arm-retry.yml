@@ -28,6 +28,12 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Install OCI CLI
+        run: |
+          curl -L -o install_oci_cli.py https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.py
+          python3 install_oci_cli.py --accept-all-defaults
+          echo "$HOME/bin" >> $GITHUB_PATH
+
       - name: Terraform Init
         run: terraform init
 
