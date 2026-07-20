@@ -7,21 +7,24 @@ on:
 
 jobs:
   claim-instance:
+
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
+
       - name: Configure OCI credentials
-  run: |
-    mkdir -p ~/.oci
+        run: |
+          mkdir -p ~/.oci
 
-    echo "${{ secrets.OCI_CLI_KEY_CONTENT }}" > ~/.oci/oci_api_key.pem
-    chmod 600 ~/.oci/oci_api_key.pem
+          echo "${{ secrets.OCI_CLI_KEY_CONTENT }}" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
 
-    cat > ~/.oci/config <<EOF
+          cat > ~/.oci/config <<EOF
 [DEFAULT]
 user=${{ secrets.OCI_CLI_USER }}
 fingerprint=${{ secrets.OCI_CLI_FINGERPRINT }}
@@ -30,25 +33,41 @@ region=${{ secrets.OCI_CLI_REGION }}
 key_file=/home/runner/.oci/oci_api_key.pem
 EOF
 
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
 
       - name: Terraform Init
         run: terraform init
 
+
+      - name: Test OCI Authentication
+        run: |
+          oci iam region list
+
+
       - name: Try creating Oracle ARM instance
         continue-on-error: true
         run: |
+
           set +e
+
           echo "Starting Oracle ARM claim attempt..."
 
           terraform apply -auto-approve
+
           STATUS=$?
 
           if [ $STATUS -eq 0 ]; then
+            echo "================================="
             echo "SUCCESS: Oracle ARM instance created"
+            echo "================================="
           else
-            echo "No capacity available. Next attempt after 5 minutes."
+            echo "================================="
+            echo "No capacity available"
+            echo "Next attempt after 5 minutes"
+            echo "================================="
           fi
 
           exit 0
