@@ -1,0 +1,53 @@
+name: Oracle ARM Instance Auto Claimer
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  claim-instance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure OCI credentials
+        run: |
+          mkdir -p ~/.oci
+          echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+
+          cat > ~/.oci/config <<EOF
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          region=${{ secrets.OCI_REGION }}
+          key_file=/home/runner/.oci/oci_api_key.pem
+          EOF
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Try creating Oracle ARM instance
+        continue-on-error: true
+        run: |
+          set +e
+          echo "Starting Oracle ARM claim attempt..."
+
+          terraform apply -auto-approve
+          STATUS=$?
+
+          if [ $STATUS -eq 0 ]; then
+            echo "SUCCESS: Oracle ARM instance created"
+          else
+            echo "No capacity available. Next attempt after 5 minutes."
+          fi
+
+          exit 0
