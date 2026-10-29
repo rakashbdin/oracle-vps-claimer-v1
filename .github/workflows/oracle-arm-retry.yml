@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   claim-instance:
@@ -53,25 +54,45 @@ jobs:
 
 
       - name: Try creating Oracle ARM instance
+        id: terraform_apply
         shell: bash
-        continue-on-error: true
         run: |
-
           echo "Starting Oracle ARM claim attempt..."
 
-          terraform apply -auto-approve
+          set +e
+          terraform apply -auto-approve -no-color 2>&1 | tee apply_output.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
 
-          STATUS=$?
-
-          if [ $STATUS -eq 0 ]; then
+          if [ "$STATUS" -eq 0 ]; then
             echo "================================="
             echo "SUCCESS: Oracle ARM instance created"
             echo "================================="
+            echo "result=success" >> "$GITHUB_OUTPUT"
+
+          elif grep -qiE "Out of host capacity|Out of capacity|LimitExceeded.*capacity" apply_output.log; then
+            echo "================================="
+            echo "No capacity available right now - will retry in 5 minutes"
+            echo "================================="
+            echo "result=no_capacity" >> "$GITHUB_OUTPUT"
+
           else
             echo "================================="
-            echo "No capacity available"
-            echo "Will retry after 5 minutes"
+            echo "REAL ERROR (not a capacity issue) - see log above"
             echo "================================="
+            echo "result=real_error" >> "$GITHUB_OUTPUT"
+            exit 1
           fi
 
-          exit 0
+      - name: Open issue on successful claim
+        if: steps.terraform_apply.outputs.result == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Oracle ARM instance claimed - run #${context.runNumber}`,
+              body: `The Always Free Ampere A1 instance was created successfully in run ${context.runId}.\n\nCheck the OCI console to confirm it's reachable, then consider pausing this workflow's schedule.`,
+              labels: ["success"]
+            })
